@@ -120,7 +120,7 @@ func (d *Sender) Send(fileName string) {
 	fmt.Println("file sending...")
 	ips := d.getBroadcastAddr()
 	go d.broadcast(ips)
-	if err := d.receive(); err == nil {
+	if err := d.recvfromUdp(); err == nil {
 		fmt.Printf("SEND %s SUCCESS!!!\n", fileName)
 	}
 }
@@ -144,7 +144,7 @@ func (d *Sender) broadcast(ips []net.IP) {
 	}
 }
 
-func (d *Sender) receive() error {
+func (d *Sender) recvfromUdp() error {
 	for {
 		data := make([]byte, 1024)
 		n, remoteAddr, err := d.udpConn.ReadFromUDP(data)
@@ -170,12 +170,13 @@ func (d *Sender) dialT(remoteAddr *net.TCPAddr) error {
 	return err
 }
 
-func (d *Sender) recv() error {
+func (d *Sender) recvFromTcp() error {
 	headData := make([]byte, d.packer.GetHeadLen())
-	_, err := io.ReadFull(d.tranConn, headData)
-	if err != nil {
-		return err
-	}
+	// _, err := io.ReadFull(d.tranConn, headData)
+	// if err != nil {
+	// 	return err
+	// }
+	io.ReadFull(d.tranConn, headData)
 	message, err := d.packer.Unpack(headData)
 	if err != nil {
 		return err
@@ -188,7 +189,7 @@ func (d *Sender) recv() error {
 
 func (d *Sender) sendFile(conn net.Conn) error {
 	go func() {
-		if err := d.recv(); err != nil {
+		if err := d.recvFromTcp(); err != nil {
 			fmt.Printf("\nSending error: %s!\n", err)
 			d.abortChan <- os.Kill
 		}
